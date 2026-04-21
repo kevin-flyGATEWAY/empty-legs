@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Empty Legs | flyADVANCED</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:   #231f20;
+      --navy:    #0f1e38;
+      --blue:    #01579b;
+      --blue-lt: #1976d2;
+      --silver:  #808285;
+      --white:   #ffffff;
+      --bg:      #f0f2f5;
+      --border:  #dde1ea;
+      --text:    #231f20;
+      --muted:   #6b7280;
+    }
+
+    html, body { height: 100%; }
+    body {
+      font-family: "Hanken Grotesk", -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--navy);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-shrink: 0;
+      border-bottom: 3px solid var(--blue);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-icon { width: 44px; height: 28px; }
+    .logo-text { font-size: 1.35rem; font-weight: 800; letter-spacing: .04em; }
+    .logo-text .fly { color: var(--white); }
+    .logo-text .adv { color: #4fc3f7; }
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--white);
+    }
+    .header-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: #4fc3f7;
+    }
+    .header-tag svg { width: 14px; height: 14px; }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ── LEFT PANEL ── */
+    .panel-left {
+      width: 520px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+    }
+
+    .section-head {
+      padding: 20px 24px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--white);
+    }
+    .section-head h2 {
+      font-size: .8rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--text);
+      padding-bottom: 8px;
+      border-bottom: 3px solid var(--blue);
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .search-wrap { position: relative; flex: 1 1 160px; }
+    .search-wrap svg {
+      position: absolute; left: 9px; top: 50%;
+      transform: translateY(-50%);
+      width: 13px; height: 13px; color: var(--muted); pointer-events: none;
+    }
+    input[type="search"], select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: .78rem;
+      padding: 7px 9px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input[type="search"] { padding-left: 28px; width: 100%; }
+    input[type="search"]:focus, select:focus { border-color: var(--blue); }
+    select { cursor: pointer; }
+    .ctrl-count { font-size: .72rem; color: var(--muted); margin-left: auto; white-space: nowrap; }
+
+    /* ── CARDS ── */
+    .cards { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .card:hover, .card.active {
+      border-color: var(--blue);
+      box-shadow: 0 2px 16px rgba(1,87,155,.12);
+    }
+    .card-img {
+      width: 140px;
+      flex-shrink: 0;
+      object-fit: cover;
+      display: block;
+      background: var(--bg);
+    }
+    .card-content { flex: 1; padding: 12px 14px; min-width: 0; }
+
+    .card-route {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+    .card-route svg { width: 10px; height: 10px; color: var(--blue); flex-shrink: 0; }
+    .card-route .apt-label { color: var(--text); font-weight: 700; }
+    .card-route .apt-state { color: var(--muted); font-weight: 400; font-size: .62rem; display: block; }
+    .card-route .route-arrow { color: var(--blue); font-size: .8rem; }
+
+    .card-aircraft {
+      font-size: .95rem;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 10px;
+      line-height: 1.1;
+    }
+
+    .card-details { display: flex; gap: 16px; align-items: flex-start; }
+    .card-meta { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .72rem;
+      color: var(--muted);
+    }
+    .meta-row svg { width: 11px; height: 11px; flex-shrink: 0; color: var(--silver); }
+    .meta-row strong { color: var(--text); font-weight: 500; }
+
+    .card-cta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .price-label {
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--blue);
+    }
+    .btn-quote {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--navy);
+      color: var(--white);
+      font-family: inherit;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 12px;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .btn-quote:hover { background: var(--blue); }
+    .btn-quote svg { width: 9px; height: 9px; }
+
+    .no-results {
+      text-align: center;
+      padding: 40px 0;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    /* ── FEATURES BAR ── */
+    .features {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      background: var(--white);
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px 8px;
+    }
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .feature svg { width: 18px; height: 18px; color: var(--blue); flex-shrink: 0; margin-top: 1px; }
+    .feature-title {
+      font-size: .68rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--blue);
+      display: block;
+      margin-bottom: 1px;
+    }
+    .feature-desc { font-size: .65rem; color: var(--muted); line-height: 1.35; }
+
+    /* ── MAP PANEL ── */
+    .panel-right {
+      flex: 1;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      min-height: 0;
+    }
+    #map { width: 100%; height: 100%; }
+
+    /* Leaflet custom markers */
+    .apt-marker {
+      background: var(--navy);
+      color: var(--white);
+      font-family: "Hanken Grotesk", sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      padding: 3px 7px;
+      border-radius: 3px;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,.35);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .apt-marker::before {
+      content: '✈';
+      font-size: 9px;
+      color: #4fc3f7;
+    }
+    .leaflet-popup-content-wrapper {
+      font-family: "Hanken Grotesk", sans-serif;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    }
+    .leaflet-popup-content { font-size: .78rem; color: var(--text); }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--navy);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-top: 3px solid var(--blue);
+      flex-shrink: 0;
+    }
+    .footer-logo { display: flex; align-items: center; gap: 7px; }
+    .footer-logo-text { font-size: .85rem; font-weight: 800; letter-spacing: .04em; }
+    .footer-logo-text .fly { color: var(--white); }
+    .footer-logo-text .adv { color: #4fc3f7; }
+    .footer-divider { width: 1px; height: 18px; background: rgba(255,255,255,.2); }
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      color: rgba(255,255,255,.65);
+      text-decoration: none;
+      font-size: .72rem;
+      font-weight: 500;
+      letter-spacing: .04em;
+      transition: color .15s;
+    }
+    .footer-links a:hover { color: #4fc3f7; }
+
+    @media (max-width: 860px) {
+      .layout { flex-direction: column; overflow: visible; }
+      .panel-left { width: 100%; border-right: none; border-bottom: 1px solid var(--border); overflow: visible; }
+      .panel-right { position: relative; height: 380px; }
+      .card-img { width: 100px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── MAIN LAYOUT ── -->
+<div class="layout">
+
+  <!-- LEFT: Cards -->
+  <div class="panel-left" id="panel-left">
+
+    <div class="section-head">
+      <h2>Featured Empty Legs</h2>
+      <div class="controls">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="search" id="search" placeholder="Search airport, city, state…" />
+        </div>
+        <select id="filter-aircraft">
+          <option value="">All Aircraft</option>
+        </select>
+        <select id="sort">
+          <option value="date">Date ↑</option>
+          <option value="duration">Duration ↑</option>
+          <option value="seats">Seats ↓</option>
+        </select>
+        <span class="ctrl-count" id="ctrl-count"></span>
+      </div>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="features">
+      <div class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <div>
+          <span class="feature-title">Safety First</span>
+          <span class="feature-desc">Industry-leading safety standards</span>
+        </div>
+      </div>
+      <div class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <div>
+          <span class="feature-title">Flexible Travel</span>
+          <span class="feature-desc">On your schedule. Your way.</span>
+        </div>
+      </div>
+      <div class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <div>
+          <span class="feature-title">Premium Experience</span>
+          <span class="feature-desc">Comfort, privacy and exceptional service</span>
+        </div>
+      </div>
+      <div class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.65 3.42 2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 17.92z"/>
+        </svg>
+        <div>
+          <span class="feature-title">Personalized Service</span>
+          <span class="feature-desc">We're here 24/7 to meet your needs</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Map -->
+  <div class="panel-right">
+    <div id="map"></div>
+  </div>
+
+</div>
+
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────────
+const FLIGHTS = [{"image_url":"https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092","origin_airport":"Quonset State","origin_code":"OQU","origin_state":"Rhode Island","destination_airport":"Teterboro","destination_code":"TEB","destination_state":"New Jersey","aircraft":"Cessna Citation CJ3","date_from":"05/07/26","date_to":"05/08/26","duration":"00:42","seats":6,"price":"Please inquire","aircraft_uuid":"aa00239a-59ed-4320-9c92-610ba7613ce9","origin_icao":"KOQU","destination_icao":"KTEB"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092","origin_airport":"Teterboro","origin_code":"TEB","origin_state":"New Jersey","destination_airport":"New Castle County","destination_code":"ILG","destination_state":"Delaware","aircraft":"Cessna Citation CJ3","date_from":"05/10/26","date_to":"05/11/26","duration":"00:36","seats":6,"price":"Please inquire","aircraft_uuid":"aa00239a-59ed-4320-9c92-610ba7613ce9","origin_icao":"KTEB","destination_icao":"KILG"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"Morristown Muni","origin_code":"MMU","origin_state":"New Jersey","destination_airport":"New Castle County","destination_code":"ILG","destination_state":"Delaware","aircraft":"Cessna Citation XLS","date_from":"05/10/26","date_to":"05/11/26","duration":"00:36","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KMMU","destination_icao":"KILG"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"Moore County","origin_code":"SOP","origin_state":"North Carolina","destination_airport":"New Castle County","destination_code":"ILG","destination_state":"Delaware","aircraft":"Cessna Citation XLS","date_from":"05/13/26","date_to":"05/14/26","duration":"01:10","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KSOP","destination_icao":"KILG"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"New Castle County","origin_code":"ILG","origin_state":"Delaware","destination_airport":"Moore County","destination_code":"SOP","destination_state":"North Carolina","aircraft":"Cessna Citation XLS","date_from":"05/16/26","date_to":"05/17/26","duration":"01:10","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KILG","destination_icao":"KSOP"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092","origin_airport":"Manchester","origin_code":"MHT","origin_state":"New Hampshire","destination_airport":"New Castle County","destination_code":"ILG","destination_state":"Delaware","aircraft":"Cessna Citation CJ3","date_from":"05/27/26","date_to":"05/28/26","duration":"01:00","seats":6,"price":"Please inquire","aircraft_uuid":"aa00239a-59ed-4320-9c92-610ba7613ce9","origin_icao":"KMHT","destination_icao":"KILG"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092","origin_airport":"Quonset State","origin_code":"OQU","origin_state":"Rhode Island","destination_airport":"Westchester County","destination_code":"HPN","destination_state":"New York","aircraft":"Cessna Citation CJ3","date_from":"05/27/26","date_to":"05/28/26","duration":"00:36","seats":6,"price":"Please inquire","aircraft_uuid":"aa00239a-59ed-4320-9c92-610ba7613ce9","origin_icao":"KOQU","destination_icao":"KHPN"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092","origin_airport":"Westchester County","origin_code":"HPN","origin_state":"New York","destination_airport":"Quonset State","destination_code":"OQU","destination_state":"Rhode Island","aircraft":"Cessna Citation CJ3","date_from":"05/30/26","date_to":"05/31/26","duration":"00:36","seats":6,"price":"Please inquire","aircraft_uuid":"aa00239a-59ed-4320-9c92-610ba7613ce9","origin_icao":"KHPN","destination_icao":"KOQU"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"New Castle County","origin_code":"ILG","origin_state":"Delaware","destination_airport":"Morristown Muni","destination_code":"MMU","destination_state":"New Jersey","aircraft":"Cessna Citation XLS","date_from":"06/07/26","date_to":"06/08/26","duration":"00:33","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KILG","destination_icao":"KMMU"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"Greenbrier Valley","origin_code":"LWB","origin_state":"West Virginia","destination_airport":"New Castle County","destination_code":"ILG","destination_state":"Delaware","aircraft":"Cessna Citation XLS","date_from":"06/08/26","date_to":"06/09/26","duration":"01:00","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KLWB","destination_icao":"KILG"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"New Castle County","origin_code":"ILG","origin_state":"Delaware","destination_airport":"Greenbrier Valley","destination_code":"LWB","destination_state":"West Virginia","aircraft":"Cessna Citation XLS","date_from":"06/11/26","date_to":"06/12/26","duration":"01:00","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KILG","destination_icao":"KLWB"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"Morristown Muni","origin_code":"MMU","origin_state":"New Jersey","destination_airport":"New Castle County","destination_code":"ILG","destination_state":"Delaware","aircraft":"Cessna Citation XLS","date_from":"06/12/26","date_to":"06/13/26","duration":"00:33","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KMMU","destination_icao":"KILG"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"Richmond Executive","origin_code":"FCI","origin_state":"Virginia","destination_airport":"New Castle County","destination_code":"ILG","destination_state":"Delaware","aircraft":"Cessna Citation XLS","date_from":"06/19/26","date_to":"06/20/26","duration":"00:48","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KFCI","destination_icao":"KILG"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"New Castle County","origin_code":"ILG","origin_state":"Delaware","destination_airport":"Teterboro","destination_code":"TEB","destination_state":"New Jersey","aircraft":"Cessna Citation XLS","date_from":"06/19/26","date_to":"06/20/26","duration":"00:36","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KILG","destination_icao":"KTEB"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"Martha's Vineyard Muni","origin_code":"MVY","origin_state":"Massachusetts","destination_airport":"New Castle County","destination_code":"ILG","destination_state":"Delaware","aircraft":"Cessna Citation XLS","date_from":"06/21/26","date_to":"06/22/26","duration":"01:00","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KMVY","destination_icao":"KILG"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"New Castle County","origin_code":"ILG","origin_state":"Delaware","destination_airport":"Dulles Intl","destination_code":"IAD","destination_state":"District Of Columbia","aircraft":"Cessna Citation XLS","date_from":"06/21/26","date_to":"06/22/26","duration":"00:36","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KILG","destination_icao":"KIAD"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/663d21fb-fcb6-4d87-b989-91aa09039e23/cd8a7649-d849-4772-bf8e-19ab29ec37e9.jpg?1771355622","origin_airport":"Dulles Intl","origin_code":"IAD","origin_state":"District Of Columbia","destination_airport":"New Castle County","destination_code":"ILG","destination_state":"Delaware","aircraft":"Cessna Citation XLS","date_from":"06/23/26","date_to":"06/24/26","duration":"00:36","seats":8,"price":"Please inquire","aircraft_uuid":"663d21fb-fcb6-4d87-b989-91aa09039e23","origin_icao":"KIAD","destination_icao":"KILG"},{"image_url":"https://cdn.jetinsight.com/aircraft/cirrus-sr-22-turbo.jpg","origin_airport":"Martha's Vineyard Muni","origin_code":"MVY","origin_state":"Massachusetts","destination_airport":"Wings Field","destination_code":"LOM","destination_state":"Pennsylvania","aircraft":"Cirrus SR22T","date_from":"07/04/26","date_to":"07/05/26","duration":"01:54","seats":4,"price":"Please inquire","aircraft_uuid":"37045269-733d-45ed-95bc-78195789bba3","origin_icao":"KMVY","destination_icao":"KLOM"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092","origin_airport":"William P Hobby","origin_code":"HOU","origin_state":"Texas","destination_airport":"Austin Bergstrom Intl","destination_code":"AUS","destination_state":"Texas","aircraft":"Cessna Citation CJ3","date_from":"08/12/26","date_to":"08/13/26","duration":"00:42","seats":6,"price":"Please inquire","aircraft_uuid":"aa00239a-59ed-4320-9c92-610ba7613ce9","origin_icao":"KHOU","destination_icao":"KAUS"},{"image_url":"https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092","origin_airport":"Austin Bergstrom Intl","origin_code":"AUS","origin_state":"Texas","destination_airport":"William P Hobby","destination_code":"HOU","destination_state":"Texas","aircraft":"Cessna Citation CJ3","date_from":"09/17/26","date_to":"09/18/26","duration":"00:42","seats":6,"price":"Please inquire","aircraft_uuid":"aa00239a-59ed-4320-9c92-610ba7613ce9","origin_icao":"KAUS","destination_icao":"KHOU"}];
+
+const QUOTE_BASE = "https://client.jetinsight.com/embed/a371a901-ab80-42a4-a429-b10468ba9b1f/empty";
+
+// ── Airport coordinates ─────────────────────────────────────────────────────
+const COORDS = {
+  OQU:[41.597,-71.412], TEB:[40.850,-74.061], MMU:[40.799,-74.415],
+  ILG:[39.679,-75.607], SOP:[35.237,-79.389], MHT:[42.933,-71.436],
+  HPN:[41.067,-73.707], LWB:[37.858,-80.399], FCI:[37.400,-77.525],
+  MVY:[41.393,-70.615], IAD:[38.953,-77.456], LOM:[40.137,-75.265],
+  HOU:[29.645,-95.279], AUS:[30.197,-97.666],
+};
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function parseDate(s) {
+  const [m,d,y] = s.split("/");
+  return new Date(2000 + +y, +m - 1, +d);
+}
+function fmtDate(s) {
+  return parseDate(s).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"});
+}
+function parseDur(s) { const [h,m]=s.split(":").map(Number); return h*60+m; }
+function fmtDur(s) {
+  const [h,m]=s.split(":").map(Number);
+  if (!h) return `${m}m`;
+  if (!m) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+// ── Curved arc between two lat/lng points ───────────────────────────────────
+function arcPoints(lat1, lng1, lat2, lng2, n=60) {
+  const mLat=(lat1+lat2)/2, mLng=(lng1+lng2)/2;
+  const dLat=lat2-lat1, dLng=lng2-lng1;
+  const cpLat=mLat - dLng*0.22, cpLng=mLng + dLat*0.22;
+  const pts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    pts.push([
+      (1-t)*(1-t)*lat1 + 2*(1-t)*t*cpLat + t*t*lat2,
+      (1-t)*(1-t)*lng1 + 2*(1-t)*t*cpLng + t*t*lng2
+    ]);
+  }
+  return pts;
+}
+
+// ── MAP SETUP ────────────────────────────────────────────────────────────────
+const map = L.map("map", { zoomControl: true, attributionControl: false });
+
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+  subdomains: "abcd", maxZoom: 19
+}).addTo(map);
+
+L.control.attribution({ prefix: false })
+  .addAttribution('&copy; <a href="https://carto.com/">CARTO</a> &amp; OpenStreetMap contributors')
+  .addTo(map);
+
+map.setView([38.5, -79], 5);
+
+// Airport label markers
+const aptMarkers = {};
+function ensureMarker(code) {
+  if (aptMarkers[code] || !COORDS[code]) return;
+  const icon = L.divIcon({
+    className: "",
+    html: `<div class="apt-marker">${code}</div>`,
+    iconAnchor: [0, 10],
+  });
+  aptMarkers[code] = L.marker(COORDS[code], { icon, zIndexOffset: 1000 }).addTo(map);
+}
+
+// Route lines — keyed by flight index
+const routeLayers = {};
+
+function buildRouteLayer(f, idx) {
+  if (!COORDS[f.origin_code] || !COORDS[f.destination_code]) return null;
+  const [la1,ln1]=COORDS[f.origin_code], [la2,ln2]=COORDS[f.destination_code];
+  const pts = arcPoints(la1,ln1,la2,ln2);
+  const line = L.polyline(pts, {
+    color: "#01579b", weight: 2.5, opacity: 0.7,
+    className: `route-line route-${idx}`
+  });
+  return line;
+}
+
+// ── CARD + MAP RENDER ────────────────────────────────────────────────────────
+let filtered = [];
+let activeIdx = null;
+
+const PLANE_DEP = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:10px;height:10px;color:#01579b"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>`;
+const PLANE_ARR = PLANE_DEP;
+const CAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+const CLOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+const USERS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+const SEND = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+
+function cardHTML(f, idx) {
+  return `<div class="card" data-idx="${idx}"
+    onmouseenter="highlightRoute(${idx})"
+    onmouseleave="dimRoutes()"
+    onclick="activateCard(${idx})">
+    <img class="card-img" src="${f.image_url}" alt="${f.aircraft}" loading="lazy" onerror="this.style.display='none'">
+    <div class="card-content">
+      <div class="card-route">
+        ${PLANE_DEP}
+        <span><span class="apt-label">${f.origin_airport} (${f.origin_code})</span><span class="apt-state">${f.origin_state}</span></span>
+        <span class="route-arrow">→</span>
+        ${PLANE_ARR}
+        <span><span class="apt-label">${f.destination_airport} (${f.destination_code})</span><span class="apt-state">${f.destination_state}</span></span>
+      </div>
+      <div class="card-aircraft">${f.aircraft}</div>
+      <div class="card-details">
+        <div class="card-meta">
+          <div class="meta-row">${CAL} <strong>Available ${fmtDate(f.date_from)} – ${fmtDate(f.date_to)}</strong></div>
+          <div class="meta-row">${CLOCK} <strong>Travel time ${fmtDur(f.duration)}</strong></div>
+          <div class="meta-row">${USERS} <strong>Seats ${f.seats}</strong></div>
+        </div>
+        <div class="card-cta">
+          <span class="price-label">Please Inquire</span>
+          <a class="btn-quote" href="${QUOTE_BASE}?aircraft=${f.aircraft_uuid}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${SEND} Request a Quote</a>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  const q  = document.getElementById("search").value.trim().toLowerCase();
+  const ac = document.getElementById("filter-aircraft").value;
+  const so = document.getElementById("sort").value;
+
+  filtered = FLIGHTS.filter(f => {
+    if (ac && f.aircraft !== ac) return false;
+    if (q) {
+      const h = [f.aircraft,f.origin_code,f.origin_airport,f.origin_state,
+                 f.destination_code,f.destination_airport,f.destination_state].join(" ").toLowerCase();
+      if (!h.includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b)=>{
+    if(so==="date")     return parseDate(a.date_from)-parseDate(b.date_from);
+    if(so==="duration") return parseDur(a.duration)-parseDur(b.duration);
+    if(so==="seats")    return b.seats-a.seats;
+    return 0;
+  });
+
+  // Cards
+  const el = document.getElementById("cards");
+  el.innerHTML = filtered.length
+    ? filtered.map((f,i)=>cardHTML(f,i)).join("")
+    : `<div class="no-results">No flights match your filters.</div>`;
+  document.getElementById("ctrl-count").textContent =
+    `${filtered.length} flight${filtered.length!==1?"s":""}`;
+
+  // Remove old route layers
+  Object.values(routeLayers).forEach(l=>map.removeLayer(l));
+  Object.keys(routeLayers).forEach(k=>delete routeLayers[k]);
+
+  // Remove old airport markers
+  Object.values(aptMarkers).forEach(m=>map.removeLayer(m));
+  Object.keys(aptMarkers).forEach(k=>delete aptMarkers[k]);
+
+  // Add route layers + airport markers for filtered flights
+  const bounds = [];
+  filtered.forEach((f,i)=>{
+    const layer = buildRouteLayer(f,i);
+    if (layer) { layer.addTo(map); routeLayers[i]=layer; }
+    if (COORDS[f.origin_code]) { ensureMarker(f.origin_code); bounds.push(COORDS[f.origin_code]); }
+    if (COORDS[f.destination_code]) { ensureMarker(f.destination_code); bounds.push(COORDS[f.destination_code]); }
+  });
+
+  if (bounds.length) {
+    map.fitBounds(bounds, { padding: [48,48], maxZoom: 7 });
+  }
+
+  activeIdx = null;
+}
+
+function highlightRoute(idx) {
+  Object.entries(routeLayers).forEach(([i,l])=>{
+    l.setStyle({ color: +i===idx ? "#4fc3f7" : "#01579b", weight: +i===idx ? 4 : 2, opacity: +i===idx ? 1 : 0.35 });
+    if (+i===idx) l.bringToFront();
+  });
+}
+
+function dimRoutes() {
+  if (activeIdx !== null) { highlightRoute(activeIdx); return; }
+  Object.values(routeLayers).forEach(l=>l.setStyle({ color:"#01579b", weight:2.5, opacity:0.7 }));
+}
+
+function activateCard(idx) {
+  activeIdx = idx;
+  document.querySelectorAll(".card").forEach(c=>{
+    c.classList.toggle("active", +c.dataset.idx===idx);
+  });
+  highlightRoute(idx);
+  const f = filtered[idx];
+  if (COORDS[f.origin_code] && COORDS[f.destination_code]) {
+    const [la1,ln1]=COORDS[f.origin_code],[la2,ln2]=COORDS[f.destination_code];
+    map.setView([(la1+la2)/2,(ln1+ln2)/2], 6, {animate:true});
+  }
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+const sel = document.getElementById("filter-aircraft");
+[...new Set(FLIGHTS.map(f=>f.aircraft))].sort().forEach(t=>{
+  const o=document.createElement("option"); o.value=t; o.textContent=t; sel.appendChild(o);
+});
+
+["search","filter-aircraft","sort"].forEach(id=>
+  document.getElementById(id).addEventListener("input", render)
+);
+
+render();
+</script>
+</body>
+</html>

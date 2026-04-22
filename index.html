@@ -183,8 +183,10 @@
     }
     .card-route svg { width: 10px; height: 10px; color: var(--blue); flex-shrink: 0; }
     .card-route .apt-label { color: var(--text); font-weight: 700; }
+    .card-route .apt-short { display: none; }
     .card-route .apt-state { color: var(--muted); font-weight: 400; font-size: .62rem; display: block; }
     .card-route .route-arrow { color: var(--blue); font-size: .8rem; }
+    .meta-sep { color: var(--border); margin: 0 2px; }
 
     .card-aircraft {
       font-size: .95rem;
@@ -338,12 +340,73 @@
     }
     .footer-links a:hover { color: #4fc3f7; }
 
-    @media (max-width: 860px) {
-      .layout { flex-direction: column; overflow: visible; }
-      .panel-left { width: 100%; border-right: none; border-bottom: 1px solid var(--border); overflow: visible; }
-      .panel-right { position: relative; height: 380px; }
-      .card-img { width: 100px; }
+    /* ── MOBILE TABS (hidden on desktop) ── */
+    .mob-tabs { display: none; }
+
+    @media (max-width: 768px) {
+      /* Let the page scroll naturally */
+      html, body { height: auto; overflow: auto; }
+
+      /* Stack map on top, cards below */
+      .layout {
+        flex: none;
+        flex-direction: column;
+        overflow: visible;
+        height: auto;
+        min-height: 0;
+      }
+
+      /* Map: always visible at top, explicit pixel height so it never collapses */
+      .panel-right {
+        order: 1;
+        position: relative;
+        flex: none;
+        height: 280px;
+        min-height: 280px;
+        width: 100%;
+      }
+      #map { height: 280px; }
+
+      /* Cards panel below map */
+      .panel-left {
+        order: 2;
+        flex: none;
+        width: 100%;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        overflow: visible;
+        height: auto;
+      }
+
+      /* Section head */
+      .section-head { padding: 14px 14px 12px; }
+      .controls { gap: 6px; }
+      .search-wrap { flex: 1 1 100%; max-width: 100%; }
+
+      /* Cards */
+      .cards { padding: 10px; gap: 10px; }
+      .card-img { width: 90px; min-height: 90px; }
+      .card-content { padding: 10px 11px; }
+      .card-route { font-size: .62rem; margin-bottom: 4px; gap: 4px; }
+      .card-route .apt-full { display: none; }
+      .card-route .apt-short { display: inline; }
+      .card-route .apt-state { display: none; }
+      .card-aircraft { font-size: .8rem; margin-bottom: 8px; }
+      .card-details { flex-direction: column; gap: 8px; }
+      .card-cta {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+      }
+      .price-label { display: none; }
+      .meta-row { font-size: .68rem; }
+
+      /* Features — hide desc to save space */
+      .features { padding: 14px; gap: 10px 6px; }
+      .feature-desc { display: none; }
+      .feature-title { font-size: .62rem; }
     }
+
   </style>
 </head>
 <body>
@@ -544,20 +607,22 @@ function cardHTML(f, idx) {
     <div class="card-content">
       <div class="card-route">
         ${PLANE_DEP}
-        <span><span class="apt-label">${f.origin_airport} (${f.origin_code})</span><span class="apt-state">${f.origin_state}</span></span>
+        <span><span class="apt-label apt-full">${f.origin_airport} (${f.origin_code})</span><span class="apt-label apt-short">${f.origin_code}</span><span class="apt-state">${f.origin_state}</span></span>
         <span class="route-arrow">→</span>
         ${PLANE_ARR}
-        <span><span class="apt-label">${f.destination_airport} (${f.destination_code})</span><span class="apt-state">${f.destination_state}</span></span>
+        <span><span class="apt-label apt-full">${f.destination_airport} (${f.destination_code})</span><span class="apt-label apt-short">${f.destination_code}</span><span class="apt-state">${f.destination_state}</span></span>
       </div>
       <div class="card-aircraft">${f.aircraft}</div>
       <div class="card-details">
         <div class="card-meta">
           <div class="meta-row">${CAL} <strong>Available ${fmtDate(f.date_from)} – ${fmtDate(f.date_to)}</strong></div>
-          <div class="meta-row">${CLOCK} <strong>Travel time ${fmtDur(f.duration)}</strong></div>
-          <div class="meta-row">${USERS} <strong>Seats ${f.seats}</strong></div>
+          <div class="meta-row">
+            ${CLOCK} <strong>${fmtDur(f.duration)}</strong>
+            <span class="meta-sep">·</span>
+            ${USERS} <strong>${f.seats} seats</strong>
+          </div>
         </div>
         <div class="card-cta">
-          <span class="price-label">Please Inquire</span>
           <a class="btn-quote" href="${quoteUrl(f)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${SEND} Request a Quote</a>
         </div>
       </div>
@@ -687,6 +752,10 @@ const sel = document.getElementById("filter-aircraft");
 );
 
 render();
+
+// Recalculate map size on resize and on load (handles mobile layout settle)
+window.addEventListener("resize", () => map.invalidateSize());
+window.addEventListener("load", () => setTimeout(() => map.invalidateSize(), 100));
 </script>
 </body>
 </html>

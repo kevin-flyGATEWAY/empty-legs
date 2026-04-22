@@ -1,6 +1,8 @@
 import json
 import re
+import sys
 import time
+from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
@@ -10,7 +12,17 @@ PER_PAGE = 10
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://client.jetinsight.com/",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1",
 }
 
 
@@ -105,14 +117,38 @@ def parse_listings(soup):
     return flights
 
 
+def fetch_page(session, page):
+    for attempt in range(1, 4):
+        try:
+            r = session.get(BASE_URL, params={"page": page, "per_page": PER_PAGE}, timeout=15)
+            r.raise_for_status()
+            return r
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code == 403:
+                deny = e.response.headers.get("x-deny-reason", "")
+                print(f"  403 Forbidden (reason: {deny or 'unknown'}). "
+                      "The embed endpoint only allows requests from permitted hosts.", file=sys.stderr)
+                sys.exit(1)
+            if attempt == 3:
+                raise
+            wait = 2 ** attempt
+            print(f"  Error on attempt {attempt}: {e}. Retrying in {wait}s...")
+            time.sleep(wait)
+        except requests.RequestException as e:
+            if attempt == 3:
+                raise
+            wait = 2 ** attempt
+            print(f"  Error on attempt {attempt}: {e}. Retrying in {wait}s...")
+            time.sleep(wait)
+
+
 def crawl():
     all_flights = []
     session = requests.Session()
     session.headers.update(HEADERS)
 
     print("Fetching page 1...")
-    r = session.get(BASE_URL, params={"page": 1, "per_page": PER_PAGE}, timeout=15)
-    r.raise_for_status()
+    r = fetch_page(session, 1)
     soup = BeautifulSoup(r.text, "html.parser")
 
     total_pages = get_total_pages(soup)
@@ -125,15 +161,16 @@ def crawl():
     for page in range(2, total_pages + 1):
         time.sleep(0.5)
         print(f"Fetching page {page}...")
-        r = session.get(BASE_URL, params={"page": page, "per_page": PER_PAGE}, timeout=15)
-        r.raise_for_status()
+        r = fetch_page(session, page)
         soup = BeautifulSoup(r.text, "html.parser")
         flights = parse_listings(soup)
         print(f"  Page {page}: {len(flights)} listings")
         all_flights.extend(flights)
 
+    crawled_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     output = {
         "source_url": BASE_URL,
+        "last_crawled": crawled_at,
         "total_listings": len(all_flights),
         "pages_crawled": total_pages,
         "flights": all_flights,

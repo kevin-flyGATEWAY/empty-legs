@@ -491,8 +491,15 @@ L.control.attribution({ prefix: false })
 
 map.setView([38.5, -79], 5);
 
+// Z-order: base markers (590) → highlight line (620) → active markers (660)
+map.createPane("baseMarkerPane").style.zIndex  = 590;
+map.createPane("highlightPane").style.zIndex   = 620;
+map.createPane("activeMarkerPane").style.zIndex = 660;
+let highlightLayer = null;
+
 // Airport label markers
 const aptMarkers = {};
+
 function ensureMarker(code) {
   if (aptMarkers[code] || !COORDS[code]) return;
   const icon = L.divIcon({
@@ -500,7 +507,7 @@ function ensureMarker(code) {
     html: `<div class="apt-marker">${code}</div>`,
     iconAnchor: [18, 18],
   });
-  aptMarkers[code] = L.marker(COORDS[code], { icon, zIndexOffset: 1000 }).addTo(map);
+  aptMarkers[code] = L.marker(COORDS[code], { icon, pane: "baseMarkerPane" }).addTo(map);
 }
 
 // Route lines — keyed by flight index
@@ -611,29 +618,38 @@ function render() {
 }
 
 function setMarkerActive(code, active) {
-  const m = aptMarkers[code];
-  if (!m) return;
-  const el = m.getElement()?.querySelector(".apt-marker");
-  if (!el) return;
-  if (active) {
-    el.style.background = "#4fc3f7";
-    el.style.color = "#0f1e38";
-    el.style.borderColor = "#ffffff";
-    m.setZIndexOffset(2000);
-  } else {
-    el.style.background = "";
-    el.style.color = "";
-    el.style.borderColor = "";
-    m.setZIndexOffset(1000);
-  }
+  if (!COORDS[code]) return;
+  if (aptMarkers[code]) { map.removeLayer(aptMarkers[code]); delete aptMarkers[code]; }
+  const style = active ? "background:#4fc3f7;color:#0f1e38;border-color:#fff;" : "";
+  const icon = L.divIcon({
+    className: "",
+    html: `<div class="apt-marker" style="${style}">${code}</div>`,
+    iconAnchor: [18, 18],
+  });
+  aptMarkers[code] = L.marker(COORDS[code], {
+    icon,
+    pane: active ? "activeMarkerPane" : "baseMarkerPane"
+  }).addTo(map);
 }
 
 function highlightRoute(idx) {
   const active = filtered[idx];
-  Object.entries(routeLayers).forEach(([i,l])=>{
-    l.setStyle({ color: +i===idx ? "#4fc3f7" : "#01579b", weight: +i===idx ? 4 : 2, opacity: +i===idx ? 1 : 0.35 });
-    if (+i===idx) l.bringToFront();
-  });
+
+  // Dim all base lines
+  Object.values(routeLayers).forEach(l=>l.setStyle({ color:"#01579b", weight:2, opacity:0.35 }));
+
+  // Remove previous highlight line
+  if (highlightLayer) { map.removeLayer(highlightLayer); highlightLayer = null; }
+
+  // Draw fresh highlight line above markers
+  if (active && COORDS[active.origin_code] && COORDS[active.destination_code]) {
+    const [la1,ln1]=COORDS[active.origin_code], [la2,ln2]=COORDS[active.destination_code];
+    highlightLayer = L.polyline(arcPoints(la1,ln1,la2,ln2), {
+      color: "#4fc3f7", weight: 4, opacity: 1, pane: "highlightPane"
+    }).addTo(map);
+  }
+
+  // Update markers
   Object.keys(aptMarkers).forEach(code=>{
     const isActive = active && (code===active.origin_code || code===active.destination_code);
     setMarkerActive(code, isActive);
@@ -642,6 +658,7 @@ function highlightRoute(idx) {
 
 function dimRoutes() {
   if (activeIdx !== null) { highlightRoute(activeIdx); return; }
+  if (highlightLayer) { map.removeLayer(highlightLayer); highlightLayer = null; }
   Object.values(routeLayers).forEach(l=>l.setStyle({ color:"#01579b", weight:2.5, opacity:0.7 }));
   Object.keys(aptMarkers).forEach(code=>setMarkerActive(code, false));
 }

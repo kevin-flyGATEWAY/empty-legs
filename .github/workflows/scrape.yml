@@ -24,10 +24,13 @@ jobs:
       - name: Run crawler
         run: python crawler.py
 
+      - name: Inject data into index.html
+        run: python inject.py
+
       - name: Commit updated data
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add empty_legs.json
+          git add empty_legs.json index.html
           git diff --cached --quiet || git commit -m "chore: update empty legs data [$(date -u '+%Y-%m-%d')]"
           git push

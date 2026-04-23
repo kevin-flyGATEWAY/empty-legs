@@ -1,26 +1,8 @@
 {
   "source_url": "https://client.jetinsight.com/embed/a371a901-ab80-42a4-a429-b10468ba9b1f/empty",
   "total_listings": 20,
-  "pages_crawled": 2,
+  "pages_crawled": 3,
   "flights": [
-    {
-      "image_url": "https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092",
-      "origin_airport": "Quonset State",
-      "origin_code": "OQU",
-      "origin_state": "Rhode Island",
-      "destination_airport": "Teterboro",
-      "destination_code": "TEB",
-      "destination_state": "New Jersey",
-      "aircraft": "Cessna Citation CJ3",
-      "date_from": "05/07/26",
-      "date_to": "05/08/26",
-      "duration": "00:42",
-      "seats": 6,
-      "price": "Please inquire",
-      "aircraft_uuid": "aa00239a-59ed-4320-9c92-610ba7613ce9",
-      "origin_icao": "KOQU",
-      "destination_icao": "KTEB"
-    },
     {
       "image_url": "https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092",
       "origin_airport": "Teterboro",
@@ -92,6 +74,24 @@
       "aircraft_uuid": "663d21fb-fcb6-4d87-b989-91aa09039e23",
       "origin_icao": "KILG",
       "destination_icao": "KSOP"
+    },
+    {
+      "image_url": "https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092",
+      "origin_airport": "Quonset State",
+      "origin_code": "OQU",
+      "origin_state": "Rhode Island",
+      "destination_airport": "New Castle County",
+      "destination_code": "ILG",
+      "destination_state": "Delaware",
+      "aircraft": "Cessna Citation CJ3",
+      "date_from": "05/20/26",
+      "date_to": "05/21/26",
+      "duration": "01:00",
+      "seats": 6,
+      "price": "Please inquire",
+      "aircraft_uuid": "aa00239a-59ed-4320-9c92-610ba7613ce9",
+      "origin_icao": "KOQU",
+      "destination_icao": "KILG"
     },
     {
       "image_url": "https://cdn.jetinsight.com/images/aircraft/aa00239a-59ed-4320-9c92-610ba7613ce9/aa43b6fb-1d89-496f-b0d1-8b86d0c49856.jpg?1694553092",
@@ -354,8 +354,8 @@
       "destination_code": "HOU",
       "destination_state": "Texas",
       "aircraft": "Cessna Citation CJ3",
-      "date_from": "09/17/26",
-      "date_to": "09/18/26",
+      "date_from": "09/23/26",
+      "date_to": "09/24/26",
       "duration": "00:42",
       "seats": 6,
       "price": "Please inquire",

@@ -1,17 +1,54 @@
 import json
 import re
 import time
+import datetime
 import requests
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://client.jetinsight.com/embed/a371a901-ab80-42a4-a429-b10468ba9b1f/empty"
+EMBED_HOST = "https://flyadvanced.com"
 OUTPUT_FILE = "empty_legs.json"
 PER_PAGE = 10
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": f"{EMBED_HOST}/empty-legs",
+    "Origin": EMBED_HOST,
+    "Connection": "keep-alive",
+    "Sec-Fetch-Dest": "iframe",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "cross-site",
 }
+
+MAX_RETRIES = 3
+RETRY_BACKOFF = [2, 4, 8]
+
+
+def fetch_with_retry(session, url, params):
+    for attempt, backoff in enumerate([0] + RETRY_BACKOFF):
+        if backoff:
+            print(f"  Retrying in {backoff}s...")
+            time.sleep(backoff)
+        try:
+            r = session.get(url, params=params, timeout=20)
+            r.raise_for_status()
+            return r
+        except requests.HTTPError as e:
+            if attempt == MAX_RETRIES:
+                raise
+            print(f"  HTTP error: {e}")
+        except requests.RequestException as e:
+            if attempt == MAX_RETRIES:
+                raise
+            print(f"  Request error: {e}")
+    raise RuntimeError("Max retries exceeded")
 
 
 def get_total_pages(soup):
@@ -36,12 +73,10 @@ def parse_listings(soup):
     for card in soup.select(".empty-leg-block"):
         flight = {}
 
-        # Image
         img = card.select_one(".img-wrapper img")
         if img:
             flight["image_url"] = img.get("src", "")
 
-        # Location headers (departure then arrival)
         locations = card.select(".location-header")
         if len(locations) >= 1:
             airport, code, state = parse_location(locations[0].get_text(strip=True))
@@ -54,12 +89,10 @@ def parse_listings(soup):
             flight["destination_code"] = code
             flight["destination_state"] = state
 
-        # Aircraft name
         h3 = card.select_one("h3")
         if h3:
             flight["aircraft"] = h3.get_text(strip=True)
 
-        # Details (calendar=dates, clock=duration, users=seats)
         for detail in card.select(".detail"):
             text = detail.get_text(strip=True)
             icon = detail.select_one("i")
@@ -81,12 +114,10 @@ def parse_listings(soup):
                 if m:
                     flight["seats"] = int(m.group(1))
 
-        # Price
         h2 = card.select_one("h2")
         if h2:
             flight["price"] = h2.get_text(strip=True)
 
-        # Hidden form fields (aircraft UUID, ICAO origin/destination)
         form = card.select_one("form")
         if form:
             aircraft_uuid = form.select_one("input[name='embedded_leg_request[aircraft_uuid]']")
@@ -111,8 +142,7 @@ def crawl():
     session.headers.update(HEADERS)
 
     print("Fetching page 1...")
-    r = session.get(BASE_URL, params={"page": 1, "per_page": PER_PAGE}, timeout=15)
-    r.raise_for_status()
+    r = fetch_with_retry(session, BASE_URL, {"page": 1, "per_page": PER_PAGE})
     soup = BeautifulSoup(r.text, "html.parser")
 
     total_pages = get_total_pages(soup)
@@ -123,10 +153,9 @@ def crawl():
     all_flights.extend(flights)
 
     for page in range(2, total_pages + 1):
-        time.sleep(0.5)
+        time.sleep(1)
         print(f"Fetching page {page}...")
-        r = session.get(BASE_URL, params={"page": page, "per_page": PER_PAGE}, timeout=15)
-        r.raise_for_status()
+        r = fetch_with_retry(session, BASE_URL, {"page": page, "per_page": PER_PAGE})
         soup = BeautifulSoup(r.text, "html.parser")
         flights = parse_listings(soup)
         print(f"  Page {page}: {len(flights)} listings")
@@ -134,6 +163,7 @@ def crawl():
 
     output = {
         "source_url": BASE_URL,
+        "scraped_at": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "total_listings": len(all_flights),
         "pages_crawled": total_pages,
         "flights": all_flights,

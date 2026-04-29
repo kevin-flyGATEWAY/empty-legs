@@ -8,9 +8,18 @@ BASE_URL = "https://client.jetinsight.com/embed/a371a901-ab80-42a4-a429-b10468ba
 OUTPUT_FILE = "empty_legs.json"
 PER_PAGE = 10
 
+SITE_ORIGIN = "https://www.flyadvanced.com"
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": f"{SITE_ORIGIN}/empty-legs",
+    "Origin": SITE_ORIGIN,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Sec-Fetch-Site": "cross-site",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Dest": "iframe",
 }
 
 

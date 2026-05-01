@@ -1,6 +1,8 @@
 import json
 import re
+import sys
 import time
+from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
@@ -10,7 +12,17 @@ PER_PAGE = 10
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Cache-Control": "max-age=0",
 }
 
 
@@ -111,8 +123,13 @@ def crawl():
     session.headers.update(HEADERS)
 
     print("Fetching page 1...")
-    r = session.get(BASE_URL, params={"page": 1, "per_page": PER_PAGE}, timeout=15)
-    r.raise_for_status()
+    try:
+        r = session.get(BASE_URL, params={"page": 1, "per_page": PER_PAGE}, timeout=15)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        deny = r.headers.get("x-deny-reason", "")
+        print(f"ERROR: {e}" + (f" ({deny})" if deny else ""), file=sys.stderr)
+        sys.exit(1)
     soup = BeautifulSoup(r.text, "html.parser")
 
     total_pages = get_total_pages(soup)
@@ -132,8 +149,10 @@ def crawl():
         print(f"  Page {page}: {len(flights)} listings")
         all_flights.extend(flights)
 
+    scraped_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     output = {
         "source_url": BASE_URL,
+        "scraped_at": scraped_at,
         "total_listings": len(all_flights),
         "pages_crawled": total_pages,
         "flights": all_flights,

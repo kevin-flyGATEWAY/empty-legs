@@ -1,6 +1,7 @@
 import json
 import re
 import time
+from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
@@ -112,6 +113,12 @@ def crawl():
 
     print("Fetching page 1...")
     r = session.get(BASE_URL, params={"page": 1, "per_page": PER_PAGE}, timeout=15)
+    if r.status_code == 403:
+        deny = r.headers.get("x-deny-reason", "")
+        print(f"ERROR: 403 Forbidden ({deny}). The embed URL only accepts requests from")
+        print("       the allowlisted production host. Run this script from the server")
+        print("       that hosts the flyADVANCED website.")
+        return
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "html.parser")
 
@@ -134,6 +141,7 @@ def crawl():
 
     output = {
         "source_url": BASE_URL,
+        "crawled_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "total_listings": len(all_flights),
         "pages_crawled": total_pages,
         "flights": all_flights,

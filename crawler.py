@@ -1,6 +1,8 @@
 import json
 import re
+import sys
 import time
+from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
@@ -111,8 +113,13 @@ def crawl():
     session.headers.update(HEADERS)
 
     print("Fetching page 1...")
-    r = session.get(BASE_URL, params={"page": 1, "per_page": PER_PAGE}, timeout=15)
-    r.raise_for_status()
+    try:
+        r = session.get(BASE_URL, params={"page": 1, "per_page": PER_PAGE}, timeout=15)
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        print("Keeping existing data unchanged.", file=sys.stderr)
+        sys.exit(1)
     soup = BeautifulSoup(r.text, "html.parser")
 
     total_pages = get_total_pages(soup)
@@ -132,8 +139,10 @@ def crawl():
         print(f"  Page {page}: {len(flights)} listings")
         all_flights.extend(flights)
 
+    scraped_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     output = {
         "source_url": BASE_URL,
+        "scraped_at": scraped_at,
         "total_listings": len(all_flights),
         "pages_crawled": total_pages,
         "flights": all_flights,
@@ -142,7 +151,7 @@ def crawl():
     with open(OUTPUT_FILE, "w") as f:
         json.dump(output, f, indent=2)
 
-    print(f"\nDone. {len(all_flights)} total listings saved to {OUTPUT_FILE}")
+    print(f"\nDone. {len(all_flights)} total listings saved to {OUTPUT_FILE} (scraped at {scraped_at})")
 
 
 if __name__ == "__main__":
